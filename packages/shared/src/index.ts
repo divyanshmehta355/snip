@@ -3,6 +3,7 @@ import { z } from "zod";
 export const CreateUrlSchema = z.object({
   url: z.string().url("Please enter a valid URL (e.g., https://example.com)"),
   userId: z.string().optional(),
+  expiresAt: z.string().datetime().optional(),
 });
 
 export type CreateUrlRequest = z.infer<typeof CreateUrlSchema>;

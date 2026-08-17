@@ -35,18 +35,35 @@ export async function urlRoutes(server: FastifyInstance) {
         // Not logged in or invalid token
       }
 
-      const { url } = request.body;
+      const { url, expiresAt } = request.body;
       const shortCode = nanoid(7);
+
+      let expiresDate: Date | null = null;
+      if (expiresAt) {
+        expiresDate = new Date(expiresAt);
+      }
 
       // Save to database
       await db.insert(urls).values({
         shortCode,
         longUrl: url,
         userId: userId || null,
+        expiresAt: expiresDate,
       });
 
-      // Cache in Redis for fast redirects (e.g. 24 hours)
-      await redis.setex(`url:${shortCode}`, 86400, url);
+      // Cache in Redis for fast redirects
+      // Calculate TTL: Default 24 hours, or seconds until expiration if sooner
+      let ttl = 86400; // 24 hours
+      if (expiresDate) {
+        const secondsUntilExpiration = Math.floor((expiresDate.getTime() - Date.now()) / 1000);
+        if (secondsUntilExpiration > 0 && secondsUntilExpiration < 86400) {
+          ttl = secondsUntilExpiration;
+        } else if (secondsUntilExpiration <= 0) {
+          ttl = 1; // Extremely short TTL if already expired
+        }
+      }
+      
+      await redis.setex(`url:${shortCode}`, ttl, url);
 
       return { shortCode, originalUrl: url };
     }
@@ -79,7 +96,7 @@ export async function urlRoutes(server: FastifyInstance) {
     async (request, reply) => {
       const { code } = request.params as { code: string };
 
-      // 1. Try to get from cache
+      // 1. Try to get from cache (which respects TTL)
       let longUrl = await redis.get<string>(`url:${code}`);
       let urlRecordId: number | null = null;
 
@@ -95,11 +112,22 @@ export async function urlRoutes(server: FastifyInstance) {
           return reply.status(404).send({ error: "URL not found" });
         }
 
+        if (urlRecord.expiresAt && urlRecord.expiresAt < new Date()) {
+          return reply.status(410).send({ error: "This link has expired" });
+        }
+
         longUrl = urlRecord.longUrl;
         urlRecordId = urlRecord.id;
 
         // Cache it for future requests
-        await redis.setex(`url:${code}`, 86400, longUrl);
+        let ttl = 86400;
+        if (urlRecord.expiresAt) {
+          const secondsUntilExpiration = Math.floor((urlRecord.expiresAt.getTime() - Date.now()) / 1000);
+          if (secondsUntilExpiration > 0 && secondsUntilExpiration < 86400) {
+            ttl = secondsUntilExpiration;
+          }
+        }
+        await redis.setex(`url:${code}`, ttl, longUrl);
       }
 
       // 3. Track the click asynchronously (fire and forget)

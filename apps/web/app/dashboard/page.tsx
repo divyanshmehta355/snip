@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import { ExternalLink, Link2, MousePointerClick, BarChart3 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { QrModal } from "@/components/qr-modal";
 
 export default async function DashboardPage() {
   const token = await getToken();
@@ -46,27 +47,49 @@ export default async function DashboardPage() {
         ) : (
           urls.map((url: any) => {
             const shortUrl = `${process.env.NEXT_PUBLIC_API_URL}/${url.shortCode}`;
+            const isExpired = url.expiresAt && new Date(url.expiresAt) < new Date();
+
             return (
               <div
                 key={url.id}
-                className="flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-6 rounded-xl border bg-card text-card-foreground shadow-sm transition-all hover:shadow-md gap-4"
+                className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-6 rounded-xl border shadow-sm transition-all gap-4 ${
+                  isExpired 
+                    ? "bg-muted/30 border-border/50 opacity-80" 
+                    : "bg-card hover:shadow-md border-border"
+                }`}
               >
                 <div className="space-y-1 overflow-hidden">
                   <div className="flex items-center gap-2">
-                    <a
-                      href={shortUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-medium text-primary hover:underline flex items-center gap-1 text-lg"
-                    >
-                      {shortUrl} <ExternalLink className="w-3 h-3" />
-                    </a>
+                    {isExpired ? (
+                      <span
+                        className="font-medium flex items-center gap-1 text-lg text-muted-foreground line-through pointer-events-none"
+                      >
+                        {shortUrl} <ExternalLink className="w-3 h-3" />
+                      </span>
+                    ) : (
+                      <a
+                        href={shortUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-medium flex items-center gap-1 text-lg text-primary hover:underline"
+                      >
+                        {shortUrl} <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                    {isExpired && (
+                      <span className="bg-destructive/10 text-destructive text-xs px-2 py-0.5 rounded-full font-medium ml-2">
+                        Expired
+                      </span>
+                    )}
                   </div>
                   <p className="text-sm text-muted-foreground truncate" title={url.longUrl}>
                     {url.longUrl}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     Created {format(new Date(url.createdAt), "MMM d, yyyy")}
+                    {url.expiresAt && !isExpired && (
+                      <> &bull; Expires {format(new Date(url.expiresAt), "MMM d, yyyy")}</>
+                    )}
                   </p>
                 </div>
 
@@ -76,12 +99,15 @@ export default async function DashboardPage() {
                     <span className="font-medium">{url.clickCount || 0}</span>
                   </div>
                   
-                  <Link href={`/dashboard/${url.shortCode}`}>
-                    <Button variant="outline" size="sm" className="gap-2">
-                      <BarChart3 className="w-4 h-4" />
-                      <span className="hidden sm:inline">Analytics</span>
-                    </Button>
-                  </Link>
+                  <div className="flex items-center gap-2">
+                    <QrModal url={shortUrl} />
+                    <Link href={`/dashboard/${url.shortCode}`}>
+                      <Button variant="outline" size="sm" className="gap-2">
+                        <BarChart3 className="w-4 h-4" />
+                        <span className="hidden sm:inline">Analytics</span>
+                      </Button>
+                    </Link>
+                  </div>
                 </div>
               </div>
             );
