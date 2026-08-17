@@ -2,8 +2,8 @@ import { FastifyInstance } from "fastify";
 import { db } from "../db";
 import { urls, clicks } from "../db/schema";
 import { eq, desc, and } from "drizzle-orm";
-import UAParser from "ua-parser-js";
-import { format, subDays, startOfDay } from "date-fns";
+import { UAParser } from "ua-parser-js";
+import { format, subDays } from "date-fns";
 
 export async function analyticsRoutes(server: FastifyInstance) {
   server.get(

@@ -16,7 +16,7 @@ export async function authRoutes(server: FastifyInstance) {
 
       const parsed = schema.safeParse(request.body);
       if (!parsed.success) {
-        return reply.status(400).send({ error: parsed.error.errors[0].message });
+        return reply.status(400).send({ error: parsed.error.issues[0].message });
       }
 
       const { email, password, name } = parsed.data;
