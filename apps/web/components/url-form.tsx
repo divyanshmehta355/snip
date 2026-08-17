@@ -11,9 +11,10 @@ import { Link2, Loader2 } from "lucide-react";
 
 interface UrlFormProps {
   onSuccess: (data: { shortCode: string; originalUrl: string }) => void;
+  token?: string;
 }
 
-export function UrlForm({ onSuccess }: UrlFormProps) {
+export function UrlForm({ onSuccess, token }: UrlFormProps) {
   const [isLoading, setIsLoading] = React.useState(false);
 
   const {
@@ -30,13 +31,19 @@ export function UrlForm({ onSuccess }: UrlFormProps) {
   const onSubmit = async (data: CreateUrlRequest) => {
     setIsLoading(true);
     try {
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
       const response = await fetch(
         process.env.NEXT_PUBLIC_API_URL + "/api/urls",
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers,
           body: JSON.stringify(data),
         }
       );

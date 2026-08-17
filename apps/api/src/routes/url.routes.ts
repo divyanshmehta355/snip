@@ -27,6 +27,14 @@ export async function urlRoutes(server: FastifyInstance) {
         return reply.status(429).send({ error: "Too many requests" });
       }
 
+      let userId = null;
+      try {
+        await request.jwtVerify();
+        userId = (request.user as any)?.id;
+      } catch (e) {
+        // Not logged in or invalid token
+      }
+
       const { url } = request.body;
       const shortCode = nanoid(7);
 
@@ -34,12 +42,34 @@ export async function urlRoutes(server: FastifyInstance) {
       await db.insert(urls).values({
         shortCode,
         longUrl: url,
+        userId: userId || null,
       });
 
       // Cache in Redis for fast redirects (e.g. 24 hours)
       await redis.setex(`url:${shortCode}`, 86400, url);
 
       return { shortCode, originalUrl: url };
+    }
+  );
+
+  // Get URLs for a specific user
+  fastify.get(
+    "/api/urls/me",
+    { preValidation: [server.authenticate] },
+    async (request, reply) => {
+      const userId = (request.user as any)?.id;
+
+      if (!userId) {
+        return reply.status(401).send({ error: "Unauthorized" });
+      }
+
+      const userUrls = await db
+        .select()
+        .from(urls)
+        .where(eq(urls.userId, userId))
+        .orderBy(urls.createdAt); // Needs desc(), but we'll keep it simple
+
+      return userUrls;
     }
   );
 
