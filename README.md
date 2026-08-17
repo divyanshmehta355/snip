@@ -1,10 +1,7 @@
-<div align="center">
-  <img src="https://lucide.dev/icons/scissors.svg" width="80" alt="Snip Logo" />
-  <h1>Snip</h1>
-  <p><strong>A blazingly fast, modern URL shortener with advanced analytics and ephemeral links.</strong></p>
-</div>
+# Snip
 
-<br/>
+**A blazingly fast, modern URL shortener with advanced analytics and ephemeral links.**
+
 
 Snip is an enterprise-grade URL shortening platform built on a decoupled, high-performance monorepo architecture. It features lightning-fast redirects, advanced click tracking, high-resolution QR code generation, and strict TTL expiration policies—all wrapped in a premium, dark-mode first UI.
 
@@ -23,33 +20,41 @@ Snip is an enterprise-grade URL shortening platform built on a decoupled, high-p
 
 Snip is built inside a **Turborepo** workspace to seamlessly share types, schemas, and configurations between the decoupled frontend and backend.
 
-```mermaid
-graph TD
-    classDef client fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:white;
-    classDef frontend fill:#0ea5e9,stroke:#0284c7,stroke-width:2px,color:white;
-    classDef backend fill:#8b5cf6,stroke:#7c3aed,stroke-width:2px,color:white;
-    classDef data fill:#10b981,stroke:#059669,stroke-width:2px,color:white;
-
-    User([User / Browser]):::client
-    
-    subgraph "Monorepo (Turborepo)"
-        Next[Next.js 15 App<br/>(apps/web)]:::frontend
-        Fastify[Fastify API<br/>(apps/api)]:::backend
-        Shared[(packages/shared)<br/>Zod Schemas & Types]
-    end
-
-    Redis[(Upstash Redis<br/>Cache & Rate Limiting)]:::data
-    DB[(Neon PostgreSQL<br/>Serverless DB)]:::data
-    
-    User -->|Views Dashboards & Forms| Next
-    User -->|Clicks Short Link| Fastify
-    Next -->|REST API Requests + JWT| Fastify
-    
-    Fastify <-->|Read/Write TTL Cache| Redis
-    Fastify <-->|Drizzle ORM| DB
-    
-    Next -.->|Consumes| Shared
-    Fastify -.->|Consumes| Shared
+```text
+                              +-----------------------+
+                              |                       |
+                              |    User / Browser     |
+                              |                       |
+                              +------+---------+------+
+                                     |         |
+                  Views UI (Next.js) |         | Direct Redirects
+                                     |         |
+                                     v         v
++-----------------------+        +-----------------------+
+|                       |        |                       |
+|   Next.js 15 App      +------->|   Fastify API         |
+|   (apps/web)          |  REST  |   (apps/api)          |
+|                       |        |                       |
++-----------+-----------+        +-----+-----------+-----+
+            |                          |           |
+            | Imports                  |           |
+            v                          |           |
++-----------------------+              |           |
+|                       |<-------------+           |
+|   Zod Schemas/Types   |  Imports                 |
+|   (packages/shared)   |                          |
++-----------------------+                          |
+                                                   |
+                                                   |
+                     +--------------------------+  |
+                     |       Upstash Redis      |<-+
+                     |    (Cache & Rate Limit)  |
+                     +--------------------------+  |
+                                                   |
+                     +--------------------------+  |
+                     |      Neon PostgreSQL     |<-+
+                     |      (Serverless DB)     |
+                     +--------------------------+
 ```
 
 ### Technology Stack
