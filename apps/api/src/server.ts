@@ -6,6 +6,7 @@ import {
 } from "fastify-type-provider-zod";
 import { urlRoutes } from "./routes/url.routes";
 import { authRoutes } from "./routes/auth.routes";
+import { analyticsRoutes } from "./routes/analytics.routes";
 import jwtPlugin from "./plugins/jwt";
 
 const server = Fastify({
@@ -27,6 +28,7 @@ server.get("/health", async (request, reply) => {
 
 server.register(authRoutes);
 server.register(urlRoutes);
+server.register(analyticsRoutes);
 
 const start = async () => {
   try {
